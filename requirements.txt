@@ -1,0 +1,7 @@
+playwright>=1.40.0
+requests>=2.31.0
+openpyxl>=3.1.0
+flask>=3.0.0
+pywin32>=306
+pyautogui>=0.9.54
+pyinstaller>=6.0.0

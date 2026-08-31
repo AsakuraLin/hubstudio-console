@@ -1,0 +1,31 @@
+# 本地配置与密钥（勿上传）
+config.json
+accounts.csv
+*.key
+*.pem
+.env
+.env.*
+
+# 运行产物
+imgs/
+results_*.csv
+*.log
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+
+# 打包产物（体积大）
+build/
+dist/
+*.spec.bak
+*.zip
+
+# IDE / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.tmp
+_tmp_*

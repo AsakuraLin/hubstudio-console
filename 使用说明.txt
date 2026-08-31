@@ -1,0 +1,32 @@
+HubStudio 批量控制台 - 使用说明
+================================
+
+【给没有 Python 的朋友】
+1. 解压整个文件夹「HubStudio批量控制台」到任意位置
+2. 双击运行 HubStudio批量控制台.exe
+3. 浏览器会自动打开 http://127.0.0.1:5050
+4. 在页面顶部「环境设置」填写本机 HubStudio 安装目录，点「保存设置」
+5. 点「测试连接 HubStudio」，显示已连接后再开始查号
+
+【HubStudio 路径怎么填】
+- 填安装文件夹，例如：D:\HubStudio
+- 或填 exe 完整路径，例如：C:\Program Files\HubStudio\HubStudio.exe
+- 每台电脑路径不同，只需在本机填一次，会保存在 config.json
+
+【HubStudio 要求】
+- HubStudio 客户端需已安装并登录
+- 设置里开启 Local API（默认端口 6873）
+
+【辅助邮箱绑定（可选）】
+- 控制台填写辅助邮箱 + 密码（按行与机子号对应）
+- 跑任务前建议手动打开 Foxmail「系统设置」（右上角 ≡ → 帐号管理），保持打开
+- Foxmail 路径在 config.json 的 foxmail.exe_path / data_dir 中修改
+
+【Excel 回写（可选）】
+- 在环境设置填 Excel 总表完整路径
+- 查号前在 WPS 打开该表，并填写本批工作表名
+
+【注意】
+- 不要关闭运行 exe 时的黑色命令行窗口，关闭即停止服务
+- config.json、results、imgs 会保存在 exe 同目录
+- 问题状态（需绑定辅助邮箱等）不会自动弹窗，点机子号旁「打开」查看当前页

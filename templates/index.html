@@ -1,0 +1,1702 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HubStudio 批量打开控制台</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --border: #2d3a4f;
+      --text: #e7ecf3;
+      --muted: #8b9cb3;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --err: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .wrap { max-width: 1400px; margin: 0 auto; padding: 24px; }
+    h1 { margin: 0 0 8px; font-size: 1.6rem; }
+    .sub { color: var(--muted); margin-bottom: 20px; font-size: 0.95rem; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .grid-recovery {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    @media (max-width: 1100px) {
+      .grid, .grid-recovery { grid-template-columns: 1fr; }
+    }
+    .section-title {
+      margin: 24px 0 12px;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+    .section-box {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .section-box.recovery {
+      border-color: rgba(59, 130, 246, 0.45);
+      background: linear-gradient(180deg, rgba(59,130,246,.08), var(--panel));
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .field-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .field-head label { margin-bottom: 0; }
+    button.clear-btn {
+      padding: 3px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+    button.clear-btn:hover {
+      color: var(--err);
+      border-color: var(--err);
+      background: rgba(239,68,68,.1);
+    }
+    .hint { color: var(--muted); font-size: 0.85rem; margin-bottom: 10px; line-height: 1.5; }
+    textarea {
+      width: 100%;
+      min-height: 220px;
+      resize: vertical;
+      background: #0d1218;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    input[type="text"] {
+      width: 100%;
+      background: #0d1218;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin: 18px 0;
+    }
+    .toolbar.cleanup-bar {
+      margin-top: -8px;
+      margin-bottom: 18px;
+      padding: 10px 14px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .toolbar.cleanup-bar .cleanup-label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      margin-right: 4px;
+      white-space: nowrap;
+    }
+    .toolbar .stop-one-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .toolbar #stopMachineInput {
+      width: 220px;
+      min-width: 160px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0d1218;
+      color: var(--text);
+      font-size: 13px;
+    }
+    .toolbar #stopMachineInput:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    select, button {
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      font-size: 14px;
+    }
+    select {
+      background: #0d1218;
+      color: var(--text);
+    }
+    button {
+      cursor: pointer;
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+    button:hover { background: var(--accent-hover); }
+    button.secondary { background: transparent; color: var(--text); }
+    button.danger { background: var(--err); border-color: var(--err); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.open-btn {
+      padding: 4px 10px;
+      font-size: 12px;
+      margin-right: 8px;
+      background: transparent;
+      color: #93c5fd;
+      border-color: #3b82f6;
+    }
+    button.open-btn:hover { background: rgba(59,130,246,.15); }
+    button.rec-pwd-err-btn {
+      padding: 4px 8px;
+      font-size: 11px;
+      margin-left: 8px;
+      background: rgba(239,68,68,.12);
+      color: #f87171;
+      border-color: #ef4444;
+      vertical-align: middle;
+    }
+    button.rec-pwd-err-btn:hover { background: rgba(239,68,68,.22); }
+    .machine-cell { white-space: nowrap; }
+    .detail-cell .code-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed var(--border);
+    }
+    .detail-cell .code-row .mid-tag {
+      color: #93c5fd;
+      font-weight: 600;
+      font-size: 12px;
+      flex: 0 0 100%;
+    }
+    .detail-cell .code-row .rec-inline {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 16px;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .detail-cell .code-row .rec-tag {
+      color: var(--muted);
+      font-size: 12px;
+      flex: 0 1 auto;
+      white-space: nowrap;
+    }
+    .detail-cell .code-row .rec-tag b {
+      color: var(--text);
+      font-weight: 500;
+    }
+    button.copy-rec-btn {
+      padding: 4px 10px;
+      font-size: 12px;
+      border-radius: 8px;
+      border: 1px solid #3b82f6;
+      background: rgba(59, 130, 246, 0.18);
+      color: #93c5fd;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    button.copy-rec-btn:hover {
+      background: rgba(59, 130, 246, 0.32);
+    }
+    button.copy-rec-btn:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+    a.shot-link {
+      color: #c4b5fd;
+      text-decoration: underline;
+      word-break: break-all;
+      cursor: pointer;
+    }
+    a.shot-link:hover {
+      color: #ddd6fe;
+    }
+    button.open-shot-folder-btn {
+      padding: 3px 8px;
+      font-size: 11px;
+      border-radius: 8px;
+      border: 1px solid #64748b;
+      background: rgba(100, 116, 139, 0.2);
+      color: #cbd5e1;
+      cursor: pointer;
+      white-space: nowrap;
+      margin-left: 6px;
+      vertical-align: baseline;
+    }
+    button.open-shot-folder-btn:hover {
+      background: rgba(100, 116, 139, 0.35);
+    }
+    .detail-cell .code-input {
+      width: 120px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid #3b82f6;
+      background: #0d1218;
+      color: var(--text);
+    }
+    .detail-cell .code-confirm {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+    .status-bar {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+    }
+    .progress {
+      height: 8px;
+      background: #0d1218;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+    .progress > div {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #3b82f6, #22c55e);
+      transition: width 0.3s ease;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 10px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 600; }
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .tag.ok { background: rgba(34,197,94,.15); color: var(--ok); }
+    .tag.warn { background: rgba(245,158,11,.15); color: var(--warn); }
+    .tag.err { background: rgba(239,68,68,.15); color: var(--err); }
+    .tag.neutral { background: rgba(139,156,179,.15); color: var(--muted); }
+    .alert {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(245,158,11,.12);
+      color: #fcd34d;
+      font-size: 13px;
+      display: none;
+    }
+    .tag.run {
+      background: rgba(59,130,246,.18);
+      color: #93c5fd;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.65; }
+    }
+    .activity-log {
+      margin-top: 12px;
+      max-height: 160px;
+      overflow-y: auto;
+      background: #0d1218;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--muted);
+    }
+    .activity-log .line { color: var(--text); }
+    .activity-log .line .at { color: var(--muted); margin-right: 8px; }
+    .activity-log .line .mid { color: #93c5fd; margin-right: 8px; }
+    .results-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 16px;
+      align-items: start;
+    }
+    @media (max-width: 1100px) {
+      .results-layout { grid-template-columns: 1fr; }
+    }
+    .status-summary-panel {
+      background: #0d1218;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      position: sticky;
+      top: 16px;
+    }
+    .status-summary-panel label {
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+    }
+    .status-summary-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .status-summary-toolbar button {
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+    .status-summary-box {
+      width: 100%;
+      min-height: 280px;
+      max-height: 520px;
+      resize: vertical;
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: Consolas, "PingFang SC", monospace;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .login-link-panel {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--border);
+    }
+    .login-link-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .login-link-toolbar label {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .login-link-toolbar button {
+      padding: 5px 10px;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+    .login-link-box {
+      width: 100%;
+      min-height: 72px;
+      max-height: 140px;
+      resize: vertical;
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-family: Consolas, "PingFang SC", monospace;
+      font-size: 11px;
+      line-height: 1.4;
+      word-break: break-all;
+    }
+    .status-summary-hint {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    td.detail-cell {
+      max-width: 360px;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>HubStudio 批量打开控制台</h1>
+    <p class="sub">三列按行一一对应。浏览器在<strong>后台静默运行</strong>（桌面不弹窗），进度请看下方状态栏与<strong>实时日志</strong>。首次使用请先配置 HubStudio 安装路径。</p>
+
+    <div class="section-title">环境设置（首次必填）</div>
+    <div class="section-box">
+      <label for="hubstudioPath">HubStudio 安装目录或 HubStudio.exe 路径</label>
+      <div class="hint">每台电脑路径不同，请填本机 HubStudio 安装文件夹（如 <code>D:\HubStudio</code>）或 <code>HubStudio.exe</code> 完整路径。未运行时会自动尝试启动。</div>
+      <input type="text" id="hubstudioPath" placeholder="D:\HubStudio 或 C:\Program Files\HubStudio\HubStudio.exe" />
+      <label for="excelFilePath" style="margin-top:12px">Excel 总表路径（可选）</label>
+      <div class="hint">如 <code>C:\Users\...\JP注册亚马逊接码.xlsx</code>，用于查号后回写「登入情况」。</div>
+      <input type="text" id="excelFilePath" placeholder="JP注册亚马逊接码.xlsx 的完整路径" />
+      <div class="toolbar" style="margin-top:12px;margin-bottom:0">
+        <button type="button" id="saveSettingsBtn" class="secondary">保存设置</button>
+        <button type="button" id="testHubBtn">测试连接 HubStudio</button>
+      </div>
+      <div id="settingsHint" class="hint" style="margin-top:8px">HubStudio API：未检测</div>
+    </div>
+
+    <div class="section-title">
+      主账号（必填）
+      <button type="button" id="clearMainAllBtn" class="clear-btn" style="margin-left:10px;vertical-align:middle">清除全部</button>
+    </div>
+    <div class="grid">
+      <div class="panel">
+        <div class="field-head">
+          <label for="machines">机子号（每行一个）</label>
+          <button type="button" class="clear-btn" data-clear="machines">清除</button>
+        </div>
+        <div class="hint">HubStudio 环境名称，例如：<code>26-8-25-JPWGXH-186</code></div>
+        <textarea id="machines" placeholder="26-8-25-JPWGXH-306&#10;26-8-25-JPWGXH-307"></textarea>
+      </div>
+      <div class="panel">
+        <div class="field-head">
+          <label for="emails">邮箱（每行一个）</label>
+          <button type="button" class="clear-btn" data-clear="emails">清除</button>
+        </div>
+        <div class="hint">与左侧机子号按行对应</div>
+        <textarea id="emails" placeholder="user1@hotmail.com&#10;user2@outlook.com"></textarea>
+      </div>
+      <div class="panel">
+        <div class="field-head">
+          <label for="passwords">密码（每行一个）</label>
+          <button type="button" class="clear-btn" data-clear="passwords">清除</button>
+        </div>
+        <div class="hint">与邮箱按行对应</div>
+        <textarea id="passwords" placeholder="password1&#10;password2"></textarea>
+      </div>
+    </div>
+
+    <div class="section-title">
+      辅助邮箱绑定（可选）
+      <button type="button" id="clearRecoveryAllBtn" class="clear-btn" style="margin-left:10px;vertical-align:middle">清除全部</button>
+    </div>
+    <div class="section-box recovery">
+      <div class="hint" style="margin-top:0">辅助邮箱为<strong>共享池</strong>：只有真正进入绑定页的机子才领取一条；领取后从本框移除，并显示在该机子号详情旁。机子数可多于辅助邮箱数。</div>
+      <label class="hint" style="display:flex;align-items:center;gap:8px;margin:10px 0 0;cursor:pointer;user-select:none">
+        <input type="checkbox" id="recoveryAssignOrdered" checked style="width:auto;margin:0" />
+        <span><strong>按机子列表顺序领取</strong>（推荐）：并行时也排队，池子第 1 行给列表里靠前、且需要绑定的机子，避免乱序。关闭则谁先到绑定页谁先领。</span>
+      </label>
+      <div class="grid-recovery">
+      <div class="panel" style="background:transparent;border:none;padding:0">
+        <div class="field-head">
+          <label for="recovery_emails">辅助邮箱（每行一个）</label>
+          <button type="button" class="clear-btn" data-clear="recovery_emails">清除</button>
+        </div>
+        <div class="hint">例如：<code>backup1@aol.com</code>（已存在的邮箱）</div>
+        <textarea id="recovery_emails" placeholder="backup1@aol.com&#10;backup2@aol.com"></textarea>
+      </div>
+      <div class="panel" style="background:transparent;border:none;padding:0">
+        <div class="field-head">
+          <label for="recovery_passwords">辅助邮箱密码（每行一个）</label>
+          <button type="button" class="clear-btn" data-clear="recovery_passwords">清除</button>
+        </div>
+        <div class="hint">与左侧辅助邮箱按行对应；填该邮箱登录密码，Foxmail 新建后 IMAP 收验证码</div>
+        <textarea id="recovery_passwords" placeholder="recovery_pass1&#10;recovery_pass2"></textarea>
+      </div>
+      </div>
+    </div>
+
+    <div class="section-title">WPS Excel 回写（可选）</div>
+    <div class="section-box" style="opacity:.75">
+      <div class="hint" style="margin-top:0;color:var(--warn)">此功能已暂时关闭，查号结果不会回写到 WPS Excel。需要时再说一声即可重新打开。</div>
+      <input type="hidden" id="excelSheet" value="" />
+      <datalist id="excelSheetList"></datalist>
+      <div id="excelPathHint" class="hint" style="margin-top:8px;display:none"></div>
+    </div>
+
+    <div class="toolbar">
+      <select id="mode">
+        <option value="fill_only" selected>打开 + 自动填表（推荐）</option>
+        <option value="open_only">仅打开环境</option>
+        <option value="full_check">打开 + 填表 + 检测可用性</option>
+      </select>
+      <select id="concurrency" title="同时并行打开的数量">
+        <option value="4">并行 4 个</option>
+        <option value="6" selected>并行 6 个（推荐）</option>
+        <option value="8">并行 8 个</option>
+      </select>
+      <button id="previewBtn" class="secondary">预览配对</button>
+      <button id="startBtn">开始批量执行</button>
+      <button id="cancelBtn" class="danger" disabled>停止</button>
+      <span class="stop-one-group">
+        <input type="text" id="stopMachineInput" placeholder="输入要关闭的机子号" autocomplete="off" spellcheck="false" />
+        <button type="button" id="stopMachinesBtn" class="secondary">关闭该机子号</button>
+      </span>
+      <button id="stopAllBtn" class="danger">关闭全部环境</button>
+      <span class="hint" style="margin:0;color:var(--warn)">（每次查完号记得点击）</span>
+    </div>
+
+    <div class="toolbar cleanup-bar">
+      <span class="cleanup-label">磁盘清理</span>
+      <button type="button" id="cleanupCsvBtn" class="secondary">清理旧 CSV</button>
+      <button type="button" id="openImgsFolderBtn" class="secondary">打开截图文件夹</button>
+      <button type="button" id="cleanupImgsBtn" class="secondary">删除全部截图</button>
+      <span class="hint" style="margin:0">CSV 保留最近 5 份；截图清空 imgs 文件夹</span>
+    </div>
+
+    <div class="status-bar">
+      <div id="statusText">就绪。请先输入数据，可点「预览配对」确认对应关系。</div>
+      <div class="progress"><div id="progressBar"></div></div>
+      <div id="alertBox" class="alert"></div>
+      <div id="activityLog" class="activity-log" style="display:none"></div>
+    </div>
+
+    <div class="panel">
+      <label>执行结果</label>
+      <div class="results-layout">
+        <div class="results-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>机子号</th>
+                <th>邮箱</th>
+                <th>状态</th>
+                <th>详情</th>
+              </tr>
+            </thead>
+            <tbody id="resultBody">
+              <tr><td colspan="5" style="color:var(--muted)">暂无结果</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="status-summary-panel">
+          <label for="statusSummaryBox">登入情况汇总</label>
+          <div class="status-summary-toolbar">
+            <button type="button" id="copyStatusAllBtn" class="secondary">复制机子号+状态</button>
+            <button type="button" id="copyRecoveryMapBtn" class="secondary">复制机子号+辅助邮箱</button>
+            <button type="button" id="copyStatusOnlyBtn" class="secondary">仅复制状态</button>
+            <button type="button" id="copyStatusExcelBtn" class="secondary">复制（Excel列）</button>
+          </div>
+          <textarea id="statusSummaryBox" class="status-summary-box" readonly placeholder="执行后将在此显示每台机子的登入情况，可一键复制粘贴到 Excel"></textarea>
+          <div class="status-summary-hint">状态行：<code>机子号[Tab]状态</code>。辅助邮箱行：<code>机子号[Tab]辅助邮箱[Tab]密码</code>（登入后可对表）。</div>
+          <div class="login-link-panel">
+            <div class="login-link-toolbar">
+              <label for="loginLinkBox">Outlook 登录链接（排查卡住时用）</label>
+              <button type="button" id="copyLoginLinkBtn" class="secondary">一键复制</button>
+            </div>
+            <textarea id="loginLinkBox" class="login-link-box" readonly spellcheck="false"></textarea>
+            <div class="status-summary-hint">验证码后卡住时：点「打开」→ 粘贴此链接到地址栏回车，再继续登录流程。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let currentJobId = null;
+    let lastJobId = null;
+    let pollTimer = null;
+    let cachedSettings = null;
+
+    const DEFAULT_LOGIN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=9199bf20-a13f-4107-85dc-02114787ef48&scope=https%3A%2F%2Foutlook.office.com%2F.default%20openid%20profile%20offline_access&redirect_uri=https%3A%2F%2Foutlook.live.com%2Fmail%2F&client-request-id=e37abc07-0834-b466-28cb-4f0e85dd48c1&response_mode=fragment&client_info=1&prompt=select_account&nonce=019c9ced-ae44-73d3-900b-b88551098878&state=eyJpZCI6IjAxOWM5Y2VkLWFlNDQtN2ZmOS1hOTQ1LTY3MzNiMWU5MjU4OSIsIm1ldGEiOnsiaW50ZXJhY3Rpb25UeXBlIjoicmVkaXJlY3QifX0%3D%7CaHR0cHM6Ly9vdXRsb29rLmxpdmUuY29tL21haWwvMC8_Y3VsdHVyZT1qYS1qcCZjb3VudHJ5PWpw&claims=%7B%22access_token%22%3A%7B%22xms_cc%22%3A%7B%22values%22%3A%5B%22CP1%22%5D%7D%7D%7D&x-client-SKU=msal.js.browser&x-client-VER=4.28.2&response_type=code&code_challenge=fMu-u96ReNq1Mzardj1XcoWcpmeDYeyBZn-0t_zCnEs&code_challenge_method=S256&cobrandid=ab0455a0-8d03-46b9-b18b-df2f57b9e44c&fl=dob,flname,wld&sso_reload=true";
+
+    function applySettingsToUi(s) {
+      if (!s) return;
+      $("hubstudioPath").value = s.hubstudio_exe_path || "";
+      $("excelFilePath").value = s.excel_file_path || "";
+      const p = s.excel_file_path || "";
+      $("excelPathHint").textContent = p
+        ? `总表路径：${p}`
+        : "未配置 Excel 总表路径（可在上方环境设置中填写）";
+      const linkBox = $("loginLinkBox");
+      if (linkBox) {
+        linkBox.value = (s.login_url || "").trim() || DEFAULT_LOGIN_URL;
+      }
+      updateSettingsHint(s);
+    }
+
+    async function loadSettings() {
+      try {
+        const res = await fetch("/api/settings");
+        const data = await res.json();
+        if (!data.ok) return;
+        cachedSettings = data.settings || {};
+        applySettingsToUi(cachedSettings);
+      } catch (_) {}
+    }
+
+    function payload() {
+      return {
+        machines: $("machines").value,
+        emails: $("emails").value,
+        passwords: $("passwords").value,
+        recovery_emails: $("recovery_emails").value,
+        recovery_passwords: $("recovery_passwords").value,
+        concurrency: parseInt($("concurrency").value, 10) || 6,
+        recovery_assign_ordered: !!($("recoveryAssignOrdered") && $("recoveryAssignOrdered").checked),
+        excel_sheet: "",
+        excel_sync: false,
+      };
+    }
+
+    function updateSettingsHint(s) {
+      const connected = s.api_connected;
+      const resolved = s.hubstudio_exe_resolved || "";
+      let text = connected
+        ? "HubStudio API：已连接 ✓"
+        : "HubStudio API：未连接（请打开 HubStudio 并开启 Local API，或点「测试连接」）";
+      if (resolved) text += ` | 程序：${resolved}`;
+      $("settingsHint").textContent = text;
+      $("settingsHint").style.color = connected ? "var(--ok)" : "var(--warn)";
+    }
+
+    async function saveSettings() {
+      const body = {
+        hubstudio_exe_path: $("hubstudioPath").value.trim(),
+        excel_file_path: $("excelFilePath").value.trim(),
+      };
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        updateSettingsHint(data.settings || {});
+        $("statusText").textContent = "设置已保存";
+        loadExcelHints();
+      } else {
+        $("statusText").textContent = data.error || "保存失败";
+      }
+    }
+
+    async function testHubstudio() {
+      $("statusText").textContent = "正在测试 HubStudio 连接…";
+      const res = await fetch("/api/settings/test-hubstudio", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          hubstudio_exe_path: $("hubstudioPath").value.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (data.settings) updateSettingsHint(data.settings);
+      $("statusText").textContent = data.detail || (data.ok ? "连接成功" : "连接失败");
+    }
+
+    async function loadExcelHints() {
+      try {
+        if (!cachedSettings) {
+          const cfgRes = await fetch("/api/settings");
+          const cfgData = await cfgRes.json();
+          if (cfgData.ok && cfgData.settings) {
+            cachedSettings = cfgData.settings;
+            applySettingsToUi(cachedSettings);
+          }
+        } else {
+          applySettingsToUi(cachedSettings);
+        }
+        const res = await fetch("/api/excel/sheets");
+        const data = await res.json();
+        if (data.ok && data.sheets && data.sheets.length) {
+          $("excelSheetList").innerHTML = data.sheets.map(s => `<option value="${escHtml(s)}">`).join("");
+        }
+      } catch (_) {}
+    }
+
+    function statusClass(status) {
+      if (status === "运行中") return "run";
+      if (["可用", "登入", "成功登录", "已进入邮箱", "需要绑定辅助邮箱"].some(s => status.includes(s))) return "ok";
+      if (status.includes("等待验证码")) return "warn";
+      if (["验证码处理中", "登录收尾中", "填写验证码", "处理通行密钥", "保持登录", "进入邮箱", "检查封号", "检查封号中"].some(s => status.includes(s))) return "run";
+      if (["找不到账户", "密码错误", "账户被锁", "辅助邮箱绑定失败", "辅助邮箱密码错误", "无法绑定辅助邮箱", "已绑定辅助邮箱", "AMZ账号被封", "网卡", "需要电话认证"].some(s => status.includes(s))) return "err";
+      if (["超时", "未知状态", "需要额外验证", "需要人机验证", "页面加载", "半加载", "验证流程等待"].some(s => status.includes(s))) return "warn";
+      if (["失败", "错误", "找不到", "HubStudio打开失败"].some(s => status.includes(s))) return "err";
+      return "neutral";
+    }
+
+    function renderActivityLog(log) {
+      const box = $("activityLog");
+      if (!log || !log.length) {
+        box.style.display = "none";
+        return;
+      }
+      box.style.display = "block";
+      const tail = log.slice(-12);
+      box.innerHTML = tail.map(e =>
+        `<div class="line"><span class="at">${e.at || ""}</span><span class="mid">${e.machine_id || ""}</span>${e.step || ""}</div>`
+      ).join("");
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function mergeJobRows(job) {
+      const doneMap = new Map((job.results || []).map(r => [r.machine_id, r]));
+      const claimedMap = new Map(
+        (job.recovery_claimed || []).map(c => [
+          c.machine_id,
+          {
+            email: c.recovery_email || "",
+            password: c.recovery_password || "",
+          },
+        ])
+      );
+      const overrides = job.status_overrides || {};
+      const pairs = job.pairs || [];
+      const runningSteps = job.running_steps || {};
+      const runningSet = new Set(job.running_machines || []);
+      const rows = [];
+
+      if (pairs.length) {
+        for (const p of pairs) {
+          const done = doneMap.get(p.machine_id);
+          const ov = overrides[p.machine_id];
+          const claimed = claimedMap.get(p.machine_id) || null;
+          if (done) {
+            const row = { ...done };
+            if (!row.recovery_email && claimed) {
+              row.recovery_email = claimed.email;
+            }
+            if (!row.recovery_password && claimed) {
+              row.recovery_password = claimed.password;
+            }
+            if (ov) {
+              row.status = ov.status || row.status;
+              row.detail = ov.detail || row.detail;
+              row.awaiting_code = false;
+            }
+            // 验证码提交进行中：用 running_steps 覆盖「等待验证码」展示
+            const stepInfo = runningSteps[p.machine_id];
+            const stepText = stepInfo ? String(stepInfo.step || "") : "";
+            if (stepText && (
+              /验证码|次へ|通行密钥|保持登录|收件箱|封号|登录收尾|回填|AMZ/.test(stepText)
+            ) && (
+              row.awaiting_code || String(row.status || "").includes("等待验证码") ||
+              String(row.status || "").includes("验证码处理") ||
+              String(row.status || "").includes("登录收尾") ||
+              String(row.status || "").includes("检查封号")
+            )) {
+              row.status = /等待验证码/.test(stepText)
+                ? "等待验证码"
+                : statusFromSubmitStep(stepText);
+              row.detail = `${stepText}${stepInfo.at ? " (" + stepInfo.at + ")" : ""}`;
+              row.awaiting_code = /等待验证码|验证码可能错误|仍在验证码页/.test(stepText);
+            }
+            rows.push(row);
+            continue;
+          }
+          if (ov) {
+            rows.push({
+              index: p.index,
+              machine_id: p.machine_id,
+              email: p.email || "",
+              recovery_email: claimed ? claimed.email : "",
+              recovery_password: claimed ? claimed.password : "",
+              awaiting_code: false,
+              status: ov.status || "辅助邮箱密码错误",
+              detail: ov.detail || "人工标记",
+            });
+            continue;
+          }
+          const stepInfo = runningSteps[p.machine_id];
+          const isRunning = runningSet.has(p.machine_id);
+          const rec = claimed ? claimed.email : "";
+          const recPwd = claimed ? claimed.password : "";
+          const stepText = stepInfo ? String(stepInfo.step || "") : "";
+          const waitingCode = /验证码/.test(stepText) && !!rec;
+          rows.push({
+            index: p.index,
+            machine_id: p.machine_id,
+            email: p.email || "",
+            recovery_email: rec,
+            recovery_password: recPwd,
+            awaiting_code: waitingCode,
+            status: waitingCode ? "等待验证码" : (isRunning ? "运行中" : "排队中"),
+            detail: stepInfo ? `${stepInfo.step} (${stepInfo.at})` : (isRunning ? "等待步骤上报..." : "等待启动"),
+          });
+        }
+        return rows.sort((a, b) => (a.index || 0) - (b.index || 0));
+      }
+      return job.results || [];
+    }
+
+    function escHtml(s) {
+      return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+    }
+
+    function attrEsc(s) {
+      return String(s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function cssEscape(s) {
+      if (window.CSS && typeof CSS.escape === "function") return CSS.escape(s);
+      return String(s).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+    }
+
+    let openInFlight = false;
+
+    async function openMachine(machineId, btn) {
+      machineId = String(machineId || "").trim();
+      if (!machineId) {
+        alert("机子号为空，无法打开");
+        return;
+      }
+      openInFlight = true;
+      const old = btn ? btn.textContent : "打开";
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "…";
+      }
+      $("statusText").textContent = `正在打开 ${machineId} 的当前页面（不重新登录）…`;
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 45000);
+        const res = await fetch("/api/browser/open", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ machine_id: machineId }),
+          signal: ctrl.signal,
+        });
+        clearTimeout(timer);
+        const raw = await res.text();
+        let data = {};
+        try {
+          data = raw ? JSON.parse(raw) : {};
+        } catch (_) {
+          // 服务端偶发返回 HTML（重启/异常页），但 HubStudio 窗口可能已弹出
+          const soft = `接口返回非 JSON（HTTP ${res.status}）。若浏览器窗口已弹出，可忽略此提示。`;
+          $("statusText").textContent = soft;
+          if (!res.ok) alert("打开提示：\n" + soft);
+          return;
+        }
+        const msg = data.detail || data.error || (data.ok ? "已打开当前问题页" : "打开失败");
+        $("statusText").textContent = msg;
+        if (!data.ok) {
+          // 文案里已说明「窗口已弹出可忽略」时，用较轻提示
+          if (/已弹出|可忽略/.test(String(msg))) {
+            $("statusText").textContent = msg;
+          } else {
+            alert("打开失败：\n" + msg);
+          }
+        }
+      } catch (e) {
+        const msg = String(e && e.name === "AbortError" ? "打开超时（45秒），请确认 HubStudio 仍在运行；若窗口已弹出可忽略" : e);
+        $("statusText").textContent = "打开失败: " + msg;
+        alert("打开失败：\n" + msg);
+      } finally {
+        openInFlight = false;
+        // 重绘一次以恢复按钮文字（打开期间跳过了轮询重绘）
+        if (lastResultRows && lastResultRows.length) renderResults(lastResultRows);
+        else if (btn) {
+          btn.disabled = false;
+          btn.textContent = old || "打开";
+        }
+      }
+    }
+
+    function cleanStatusText(status) {
+      return String(status ?? "").trim() || "—";
+    }
+
+    function buildStatusSummary(rows) {
+      const lines = [];
+      const statusOnly = [];
+      const recoveryLines = [];
+      for (const r of rows) {
+        const machine = String(r.machine_id ?? "").trim();
+        const status = cleanStatusText(r.status);
+        if (!machine) continue;
+        lines.push(`${machine}\t${status}`);
+        statusOnly.push(status);
+        const rec = String(r.recovery_email ?? "").trim();
+        const recPwd = String(r.recovery_password ?? "").trim();
+        if (rec) {
+          recoveryLines.push(`${machine}\t${rec}\t${recPwd}`);
+        }
+      }
+      return { lines, statusOnly, recoveryLines };
+    }
+
+    function updateStatusSummaryBox(rows) {
+      const box = $("statusSummaryBox");
+      const { lines } = buildStatusSummary(rows);
+      box.value = lines.join("\n");
+    }
+
+    async function copyText(text, okMsg) {
+      if (!text) {
+        $("statusText").textContent = "暂无可复制内容";
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        $("statusText").textContent = okMsg;
+      } catch (_) {
+        const box = $("statusSummaryBox");
+        box.focus();
+        box.select();
+        document.execCommand("copy");
+        $("statusText").textContent = okMsg + "（已选中，可 Ctrl+C）";
+      }
+    }
+
+    function copyStatusAll() {
+      copyText($("statusSummaryBox").value, `已复制 ${$("statusSummaryBox").value.split("\n").filter(Boolean).length} 条机子号+状态`);
+    }
+
+    function copyRecoveryMap() {
+      const rows = lastResultRows || [];
+      const { recoveryLines } = buildStatusSummary(rows);
+      if (!recoveryLines.length) {
+        $("statusText").textContent = "暂无已领取的辅助邮箱可复制";
+        return;
+      }
+      copyText(recoveryLines.join("\n"), `已复制 ${recoveryLines.length} 条机子号+辅助邮箱（可对表）`);
+    }
+
+    function copyStatusOnly() {
+      const rows = lastResultRows || [];
+      const { statusOnly } = buildStatusSummary(rows);
+      copyText(statusOnly.join("\n"), `已复制 ${statusOnly.length} 条状态`);
+    }
+
+    function copyStatusExcel() {
+      const rows = lastResultRows || [];
+      const { statusOnly } = buildStatusSummary(rows);
+      copyText(statusOnly.join("\n"), `已复制 ${statusOnly.length} 条状态（可直接粘贴到 Excel 登入情况列）`);
+    }
+
+    let lastResultRows = [];
+    let lastRecoveryPoolLen = null;
+    const codeDrafts = new Map(); // machine_id -> 正在输入的验证码（防轮询刷新清空）
+    // 正在提交验证码的机子：防轮询重绘把「提交中」冲掉
+    const codeSubmitting = new Map(); // machine_id -> { code, detail }
+
+    function captureCodeDrafts() {
+      document.querySelectorAll(".code-input").forEach((inp) => {
+        const mid = inp.dataset.machineId;
+        if (!mid) return;
+        codeDrafts.set(mid, inp.value || "");
+      });
+    }
+
+    function restoreCodeDrafts() {
+      document.querySelectorAll(".code-input").forEach((inp) => {
+        const mid = inp.dataset.machineId;
+        if (!mid || !codeDrafts.has(mid)) return;
+        const v = codeDrafts.get(mid);
+        if (v != null && inp.value !== v) inp.value = v;
+      });
+    }
+
+    function syncRecoveryPoolFromJob(job) {
+      if (!Array.isArray(job.recovery_emails_remaining)) return;
+      const emails = job.recovery_emails_remaining;
+      const passwords = Array.isArray(job.recovery_passwords_remaining)
+        ? job.recovery_passwords_remaining
+        : [];
+      // 仅在池变少时回写输入框（领取发生），避免打断编辑
+      if (lastRecoveryPoolLen !== null && emails.length === lastRecoveryPoolLen) return;
+      lastRecoveryPoolLen = emails.length;
+      $("recovery_emails").value = emails.join("\n");
+      $("recovery_passwords").value = passwords.join("\n");
+    }
+
+    function extractScreenshotPath(detail, screenshotPath) {
+      const fromField = String(screenshotPath || "").trim().replace(/\\/g, "/");
+      if (fromField && /\.png$/i.test(fromField)) return fromField;
+      const text = String(detail || "");
+      // 只取最后一张截图（终态），避免「等待验证码」旧图叠在封号结果上
+      const all = [...text.matchAll(/截图[:：]\s*([^\s|]+?\.(?:png|jpe?g|webp|gif))/gi)];
+      if (all.length) return all[all.length - 1][1].replace(/\\/g, "/");
+      const m2 = [...text.matchAll(/(imgs\/[^\s|<>"]+\.(?:png|jpe?g|webp|gif))/gi)];
+      return m2.length ? m2[m2.length - 1][1].replace(/\\/g, "/") : "";
+    }
+
+    function statusFromSubmitStep(step) {
+      const s = String(step || "");
+      if (/AMZ|封号/.test(s)) return "检查封号中";
+      if (/收件箱|进入邮箱|Outlook/i.test(s)) return "登录收尾中";
+      if (/保持登录|通行密钥|同意|账户选择/.test(s)) return "登录收尾中";
+      if (/填写验证码|回填验证码|次へ|验证码页/.test(s)) return "验证码处理中";
+      if (/连接浏览器|定位验证码/.test(s)) return "验证码处理中";
+      return "验证码处理中";
+    }
+
+    function formatDetailHtml(detail, screenshotPath) {
+      const shot = extractScreenshotPath(detail, screenshotPath);
+      // 详情里若有多张截图，只展示终态那一张
+      let cleaned = String(detail || "").replace(/\s*\|\s*截图[:：]\s*[^\s|]+/g, "").trim();
+      if (shot) cleaned = `${cleaned} | 截图: ${shot}`.replace(/^\s*\|\s*/, "");
+      let html = escHtml(cleaned);
+      if (!shot) return html;
+      const href = "/files/" + encodeURI(shot);
+      const link = `<a class="shot-link" href="${href}" target="_blank" rel="noopener">${escHtml(shot)}</a>`;
+      const escShot = escHtml(shot);
+      if (html.includes(escShot)) {
+        html = html.split(escShot).join(link);
+      } else if (/截图[:：]/.test(html)) {
+        html = html.replace(/截图[:：]\s*/, (m) => m + link + " ");
+      } else {
+        html += ` | 截图: ${link}`;
+      }
+      const folder = shot.includes("/") ? shot.split("/").slice(0, -1).join("/") : "imgs";
+      html += ` <button type="button" class="open-shot-folder-btn" data-folder="${attrEsc(folder)}" title="在资源管理器中打开该截图所在文件夹">打开文件夹</button>`;
+      return html;
+    }
+
+    async function openScreenshotFolder(folder) {
+      const rel = (folder || "imgs").trim() || "imgs";
+      try {
+        const res = await fetch("/api/open-imgs-folder", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ folder: rel }),
+        });
+        const data = await res.json();
+        $("statusText").textContent = data.detail || data.error || (data.ok ? "已打开文件夹" : "打开失败");
+      } catch (e) {
+        $("statusText").textContent = "打开截图文件夹失败: " + e;
+      }
+    }
+
+    function renderResults(rows) {
+      captureCodeDrafts();
+      // 点「打开」期间不要整表重绘，否则按钮被销毁，看起来像没反应
+      if (openInFlight) {
+        lastResultRows = rows;
+        updateStatusSummaryBox(rows);
+        return;
+      }
+      const active = document.activeElement;
+      const editingCode = !!(active && active.classList && active.classList.contains("code-input"));
+      const editingMid = editingCode ? (active.dataset.machineId || "") : "";
+      const selStart = editingCode ? active.selectionStart : null;
+      const selEnd = editingCode ? active.selectionEnd : null;
+
+      lastResultRows = rows;
+      updateStatusSummaryBox(rows);
+      const body = $("resultBody");
+      if (!rows.length) {
+        body.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">暂无结果</td></tr>';
+        return;
+      }
+      body.innerHTML = rows.map(r => {
+        const midRaw = String(r.machine_id ?? "");
+        const submitting = codeSubmitting.get(midRaw);
+        let statusText = String(r.status || "");
+        let detail = r.detail || "";
+        if (submitting) {
+          statusText = statusFromSubmitStep(submitting.detail);
+          detail = submitting.detail || "正在回填验证码…";
+        }
+        const detailHtml = formatDetailHtml(detail, r.screenshot_path || "");
+        const mid = escHtml(midRaw);
+        const midAttr = attrEsc(midRaw);
+        const recRaw = String(r.recovery_email || "").trim();
+        const recPwdRaw = String(r.recovery_password || "").trim();
+        const rec = escHtml(recRaw);
+        const recPwd = escHtml(recPwdRaw);
+        const needCode = !!(
+          submitting ||
+          r.awaiting_code ||
+          statusText.includes("等待验证码") ||
+          statusText.includes("验证码处理中")
+        );
+        const draft = submitting ? (submitting.code || "") : (codeDrafts.get(midRaw) || "");
+        let codeUi = "";
+        const copyPayload = attrEsc(
+          recRaw && recPwdRaw ? `${recRaw}\t${recPwdRaw}` : (recRaw || recPwdRaw)
+        );
+        const recBlock = (recRaw || recPwdRaw)
+          ? `
+            <div class="rec-inline">
+              <span class="rec-tag">辅助邮箱：<b>${rec || "未记录"}</b></span>
+              <span class="rec-tag">密码：<b>${recPwd || "—"}</b></span>
+              <button type="button" class="copy-rec-btn" data-copy="${copyPayload}" title="一键复制辅助邮箱和密码">一键复制</button>
+            </div>`
+          : `
+            <div class="rec-inline">
+              <span class="rec-tag">辅助邮箱：未记录</span>
+            </div>`;
+        if (needCode) {
+          const busy = !!submitting;
+          codeUi = `
+          <div class="code-row">
+            <span class="mid-tag">机子号 ${mid}</span>
+            ${recBlock}
+            <input type="text" class="code-input" data-machine-id="${midAttr}" placeholder="粘贴验证码" maxlength="12" autocomplete="off" value="${escHtml(draft)}" ${busy ? "disabled" : ""} />
+            <button type="button" class="code-confirm" data-machine-id="${midAttr}" ${busy ? "disabled" : ""}>${busy ? "提交中…" : "确认"}</button>
+          </div>`;
+        } else if (recRaw || recPwdRaw) {
+          codeUi = `
+          <div class="code-row">
+            <span class="mid-tag">机子号 ${mid}</span>
+            ${recBlock}
+          </div>`;
+        }
+        return `
+        <tr>
+          <td>${r.index ?? ""}</td>
+          <td class="machine-cell"><button type="button" class="open-btn" data-machine-id="${midAttr}" title="打开该机子浏览器">打开</button><span class="mid-text">${mid}</span><button type="button" class="rec-pwd-err-btn" data-machine-id="${midAttr}">辅助邮箱密码错误</button></td>
+          <td>${escHtml(r.email ?? "")}</td>
+          <td><span class="tag ${statusClass(statusText)}">${escHtml(statusText)}</span></td>
+          <td class="detail-cell">${detailHtml}${codeUi}</td>
+        </tr>`;
+      }).join("");
+
+      restoreCodeDrafts();
+      if (editingMid) {
+        const again = body.querySelector(`.code-input[data-machine-id="${cssEscape(editingMid)}"]`);
+        if (again) {
+          again.focus();
+          try {
+            const len = again.value.length;
+            const a = selStart == null ? len : Math.min(selStart, len);
+            const b = selEnd == null ? len : Math.min(selEnd, len);
+            again.setSelectionRange(a, b);
+          } catch (_) {}
+        }
+      }
+    }
+
+    async function markRecoveryPasswordBad(machineId, btn) {
+      if (!machineId) return;
+      const statusText = "辅助邮箱密码错误";
+      const old = btn ? btn.textContent : "";
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "…";
+      }
+      try {
+        if (currentJobId) {
+          const res = await fetch("/api/result/mark-status", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+              job_id: currentJobId,
+              machine_id: machineId,
+              status: statusText,
+              detail: "人工标记：辅助邮箱密码错误",
+            }),
+          });
+          const data = await res.json();
+          if (!data.ok) {
+            alert(data.error || "标记失败");
+            return;
+          }
+          $("statusText").textContent = `${machineId} 已标记为 ${statusText}`;
+          pollStatus();
+          return;
+        }
+        const rows = (lastResultRows || []).map(r => {
+          if (r.machine_id !== machineId) return r;
+          return {
+            ...r,
+            status: statusText,
+            detail: "人工标记：辅助邮箱密码错误",
+            awaiting_code: false,
+          };
+        });
+        renderResults(rows);
+        $("statusText").textContent = `${machineId} 已标记为 ${statusText}`;
+      } catch (e) {
+        alert("标记失败：\n" + e);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = old || "辅助邮箱密码错误";
+        }
+      }
+    }
+
+    async function submitRecoveryCode(machineId, code, btn) {
+      if (!machineId) return;
+      if (codeSubmitting.has(machineId)) {
+        $("statusText").textContent = `${machineId}：验证码正在提交中，请稍候…`;
+        return;
+      }
+      code = String(code || "").trim();
+      if (!code) {
+        alert("请先输入验证码");
+        return;
+      }
+
+      // 同步写入：后续任何轮询重绘都会保留「提交中…」
+      codeSubmitting.set(machineId, { code, detail: "正在回填验证码…" });
+      codeDrafts.set(machineId, code);
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "提交中…";
+      }
+      const patchLocal = (status, detail, awaiting) => {
+        const rows = (lastResultRows || []).map(r => {
+          if (r.machine_id !== machineId) return r;
+          return {
+            ...r,
+            status: status || r.status,
+            detail: detail || r.detail,
+            awaiting_code: !!awaiting,
+          };
+        });
+        lastResultRows = rows;
+        renderResults(rows);
+      };
+      patchLocal("验证码处理中", "正在回填验证码…", true);
+      $("statusText").textContent = `${machineId}：正在回填验证码…`;
+
+      let progressPoll = null;
+      const stopProgressPoll = () => {
+        if (progressPoll) {
+          clearInterval(progressPoll);
+          progressPoll = null;
+        }
+      };
+      const progressJobId = currentJobId || lastJobId || "";
+      if (progressJobId) {
+        progressPoll = setInterval(async () => {
+          try {
+            const res = await fetch(`/api/batch/status/${progressJobId}`);
+            const data = await res.json();
+            if (!data.ok || !data.job) return;
+            renderActivityLog(data.job.activity_log || []);
+            const steps = data.job.running_steps || {};
+            const s = steps[machineId];
+            if (s && s.step && codeSubmitting.has(machineId)) {
+              const cur = codeSubmitting.get(machineId) || { code };
+              codeSubmitting.set(machineId, { ...cur, detail: s.step });
+              $("statusText").textContent = `${machineId}：${s.step}`;
+            }
+            // 合并后再渲染，提交中状态由 codeSubmitting 锁住
+            renderResults(mergeJobRows(data.job));
+          } catch (_) {}
+        }, 700);
+      }
+
+      try {
+        const res = await fetch("/api/recovery/submit-code", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({
+            machine_id: machineId,
+            code,
+            job_id: progressJobId,
+          }),
+        });
+        const data = await res.json();
+        $("statusText").textContent = `${machineId}：${data.detail || data.error || (data.ok ? "已完成" : "提交失败")}`;
+        if (!data.ok) {
+          patchLocal(data.status || "超时", data.detail || data.error || "验证码提交失败", !!data.awaiting_code);
+          alert(
+            `机子号 ${machineId} 验证码提交失败：\n` +
+            (data.detail || data.error || "未知错误")
+          );
+        } else {
+          patchLocal(data.status || "登入", data.detail || "已完成", !!data.awaiting_code);
+        }
+        if (progressJobId) {
+          try {
+            const res2 = await fetch(`/api/batch/status/${progressJobId}`);
+            const data2 = await res2.json();
+            if (data2.ok && data2.job) {
+              renderActivityLog(data2.job.activity_log || []);
+              renderResults(mergeJobRows(data2.job));
+            }
+          } catch (_) {}
+        }
+      } catch (e) {
+        $("statusText").textContent = "验证码提交失败: " + e;
+        patchLocal("超时", "验证码提交异常: " + e, true);
+        alert(`机子号 ${machineId} 验证码提交失败：\n` + e);
+      } finally {
+        stopProgressPoll();
+        codeSubmitting.delete(machineId);
+        // 最终态再刷一次，去掉「提交中」
+        renderResults(lastResultRows || []);
+      }
+    }
+
+    function showAlert(msg) {
+      const box = $("alertBox");
+      if (!msg) { box.style.display = "none"; return; }
+      box.textContent = msg;
+      box.style.display = "block";
+    }
+
+    async function preview() {
+      const res = await fetch("/api/preview", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ ...payload(), mode: $("mode").value }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        $("statusText").textContent = data.error || "预览失败";
+        return;
+      }
+      showAlert(data.warning || "");
+      renderResults(data.pairs.map(p => ({
+        index: p.index,
+        machine_id: p.machine_id,
+        email: p.email,
+        status: "待执行",
+        detail: p.recovery_email ? `辅助邮箱: ${p.recovery_email}` : "辅助邮箱按需领取（进绑定页才取）",
+      })));
+      $("statusText").textContent = `预览完成，共 ${data.pairs.length} 组配对。`;
+    }
+
+    async function startBatch() {
+      const mode = $("mode").value;
+      $("startBtn").disabled = true;
+      $("cancelBtn").disabled = false;
+      $("statusText").textContent = "正在启动任务...";
+
+      const res = await fetch("/api/batch/start", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ ...payload(), mode }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        $("statusText").textContent = data.error || "启动失败";
+        $("startBtn").disabled = false;
+        $("cancelBtn").disabled = true;
+        return;
+      }
+
+      currentJobId = data.job_id;
+      lastJobId = data.job_id;
+      lastRecoveryPoolLen = null;
+      showAlert(data.warning || "");
+      renderResults((data.pairs || []).map(p => ({
+        index: p.index,
+        machine_id: p.machine_id,
+        email: p.email || "",
+        status: "排队中",
+        detail: "等待启动",
+      })));
+      pollStatus();
+    }
+
+    async function pollStatus() {
+      if (!currentJobId) return;
+      try {
+        const res = await fetch(`/api/batch/status/${currentJobId}`);
+        const data = await res.json();
+        if (!data.ok) {
+          currentJobId = null;
+          if (pollTimer) clearTimeout(pollTimer);
+          $("startBtn").disabled = false;
+          $("cancelBtn").disabled = true;
+          $("statusText").textContent = "任务已结束或丢失（若刚重启过服务，请重新点开始批量执行）";
+          return;
+        }
+
+        const job = data.job;
+      const done = job.completed ?? job.results.length;
+      const total = job.total || 1;
+      const pct = Math.round((done / total) * 100);
+      $("progressBar").style.width = pct + "%";
+
+      let text = `并行 ${job.concurrency || 6} 个 | 进度 ${done}/${total}`;
+      const running = job.running_machines || [];
+      if (running.length) {
+        text += ` | 后台运行中: ${running.join(", ")}`;
+        const steps = job.running_steps || {};
+        const stepTexts = running.map(id => {
+          const s = steps[id];
+          return s ? `${id}[${s.step}]` : id;
+        });
+        if (stepTexts.length) text += ` → ${stepTexts.join("；")}`;
+      } else if (job.status === "running" && done < total) {
+        text += " | 等待下一批启动...";
+      }
+      if (job.status === "done") {
+        text += " | 全部完成";
+        if (job.result_file) text += " | 结果已保存 CSV";
+        const ex = job.excel_sync;
+        if (ex && ex.enabled) {
+          text += ` | Excel 已回写 ${ex.updated || 0} 条`;
+          if (ex.skipped) text += `，跳过 ${ex.skipped} 条（表中无机子号）`;
+          if (ex.errors && ex.errors.length) {
+            text += `（失败 ${ex.errors.length}）`;
+          }
+        }
+      }
+      if (job.status === "cancelled") text += " | 已停止";
+      $("statusText").textContent = text;
+
+      renderActivityLog(job.activity_log || []);
+      syncRecoveryPoolFromJob(job);
+      renderResults(mergeJobRows(job));
+
+      if (job.status === "running") {
+        const interval = document.hidden ? 3000 : 1000;
+        pollTimer = setTimeout(pollStatus, interval);
+      } else {
+        $("startBtn").disabled = false;
+        $("cancelBtn").disabled = true;
+        currentJobId = null;
+      }
+    } catch (e) {
+      $("statusText").textContent = "状态查询失败，3 秒后重试…";
+      pollTimer = setTimeout(pollStatus, 3000);
+    }
+  }
+
+    async function cancelBatch() {
+      if (!currentJobId) return;
+      await fetch(`/api/batch/cancel/${currentJobId}`, { method: "POST" });
+      $("statusText").textContent = "正在停止并关闭运行中的环境...";
+    }
+
+    async function stopMachines() {
+      const input = $("stopMachineInput");
+      const typed = (input && input.value || "").trim();
+      // 优先用旁边输入框；为空时才回退左侧机子号列表
+      let machines = typed || ($("machines").value || "").trim();
+      if (!machines) {
+        $("statusText").textContent = "请先在右侧输入要关闭的机子号";
+        if (input) input.focus();
+        return;
+      }
+      // 支持逗号/空格分隔多个机子号
+      if (typed) {
+        machines = typed.split(/[\r\n,，;\s]+/).map(s => s.trim()).filter(Boolean).join("\n");
+      }
+      if (!machines) {
+        $("statusText").textContent = "请先在右侧输入要关闭的机子号";
+        if (input) input.focus();
+        return;
+      }
+      const btn = $("stopMachinesBtn");
+      const old = btn ? btn.textContent : "";
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "关闭中…";
+      }
+      $("statusText").textContent = `正在关闭机子号：${machines.split(/[\r\n,，;\s]+/).filter(Boolean).join("、")} …`;
+      try {
+        const res = await fetch("/api/browser/stop", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ machines }),
+        });
+        const data = await res.json();
+        $("statusText").textContent = data.detail || data.error || (data.ok ? "关闭完成" : "关闭失败");
+        if (data.ok && typed && input) {
+          input.value = "";
+        }
+      } catch (e) {
+        $("statusText").textContent = "关闭失败: " + e;
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = old || "关闭该机子号";
+        }
+      }
+    }
+
+    async function stopAllBrowsers() {
+      if (!confirm("确定关闭 HubStudio 全部已打开的环境？（含无头/静默模式）")) return;
+      $("statusText").textContent = "正在关闭全部环境...";
+      const res = await fetch("/api/browser/stop-all", { method: "POST" });
+      const data = await res.json();
+      $("statusText").textContent = data.detail || data.error || (data.ok ? "全部环境已关闭" : "关闭失败");
+    }
+
+    async function cleanupCsv() {
+      $("statusText").textContent = "正在清理旧 CSV…";
+      const res = await fetch("/api/cleanup/csv", { method: "POST" });
+      const data = await res.json();
+      $("statusText").textContent = data.detail || data.error || "清理完成";
+    }
+
+    async function cleanupScreenshots() {
+      if (!confirm("确定删除 imgs 文件夹下的全部截图？此操作不可恢复。")) return;
+      $("statusText").textContent = "正在删除截图…";
+      const res = await fetch("/api/cleanup/screenshots", { method: "POST" });
+      const data = await res.json();
+      $("statusText").textContent = data.detail || data.error || "删除完成";
+    }
+
+    function clearField(id) {
+      const el = $(id);
+      if (!el) return;
+      el.value = "";
+      el.focus();
+    }
+
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-clear]");
+      if (!btn) return;
+      clearField(btn.getAttribute("data-clear"));
+    });
+
+    $("clearMainAllBtn").addEventListener("click", () => {
+      ["machines", "emails", "passwords"].forEach(clearField);
+      $("statusText").textContent = "已清除主账号输入内容";
+    });
+    $("clearRecoveryAllBtn").addEventListener("click", () => {
+      ["recovery_emails", "recovery_passwords"].forEach(clearField);
+      $("statusText").textContent = "已清除辅助邮箱输入内容";
+    });
+
+    $("previewBtn").addEventListener("click", preview);
+    $("startBtn").addEventListener("click", startBatch);
+    $("cancelBtn").addEventListener("click", cancelBatch);
+    $("stopMachinesBtn").addEventListener("click", stopMachines);
+    $("stopMachineInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        stopMachines();
+      }
+    });
+    $("stopAllBtn").addEventListener("click", stopAllBrowsers);
+    $("cleanupCsvBtn").addEventListener("click", cleanupCsv);
+    $("openImgsFolderBtn").addEventListener("click", () => openScreenshotFolder("imgs"));
+    $("cleanupImgsBtn").addEventListener("click", cleanupScreenshots);
+    $("saveSettingsBtn").addEventListener("click", saveSettings);
+    $("testHubBtn").addEventListener("click", testHubstudio);
+    $("copyStatusAllBtn").addEventListener("click", copyStatusAll);
+    $("copyRecoveryMapBtn").addEventListener("click", copyRecoveryMap);
+    $("copyStatusOnlyBtn").addEventListener("click", copyStatusOnly);
+    $("copyStatusExcelBtn").addEventListener("click", copyStatusExcel);
+    $("copyLoginLinkBtn").addEventListener("click", async () => {
+      const box = $("loginLinkBox");
+      const text = (box && box.value || "").trim() || DEFAULT_LOGIN_URL;
+      try {
+        await navigator.clipboard.writeText(text);
+        const btn = $("copyLoginLinkBtn");
+        const old = btn.textContent;
+        btn.textContent = "已复制";
+        setTimeout(() => { btn.textContent = old || "一键复制"; }, 1200);
+      } catch (e) {
+        if (box) {
+          box.select();
+          document.execCommand("copy");
+        }
+        alert("已尝试复制登录链接（若失败请手动全选复制）");
+      }
+    });
+    $("resultBody").addEventListener("input", (e) => {
+      const inp = e.target.closest(".code-input");
+      if (!inp) return;
+      const mid = inp.dataset.machineId;
+      if (mid) codeDrafts.set(mid, inp.value || "");
+    });
+    $("resultBody").addEventListener("click", (e) => {
+      const shotFolderBtn = e.target.closest(".open-shot-folder-btn");
+      if (shotFolderBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        openScreenshotFolder(shotFolderBtn.getAttribute("data-folder") || "imgs");
+        return;
+      }
+      const openBtn = e.target.closest(".open-btn");
+      if (openBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        openMachine(openBtn.getAttribute("data-machine-id") || openBtn.dataset.machineId, openBtn);
+        return;
+      }
+      const copyRecBtn = e.target.closest(".copy-rec-btn");
+      if (copyRecBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const text = copyRecBtn.getAttribute("data-copy") || "";
+        if (!text) {
+          $("statusText").textContent = "暂无辅助邮箱可复制";
+          return;
+        }
+        const old = copyRecBtn.textContent;
+        copyText(text, "已复制辅助邮箱和密码").then(() => {
+          copyRecBtn.textContent = "已复制";
+          setTimeout(() => { copyRecBtn.textContent = old || "一键复制"; }, 1200);
+        });
+        return;
+      }
+      const pwdErrBtn = e.target.closest(".rec-pwd-err-btn");
+      if (pwdErrBtn) {
+        e.preventDefault();
+        markRecoveryPasswordBad(pwdErrBtn.getAttribute("data-machine-id") || pwdErrBtn.dataset.machineId, pwdErrBtn);
+        return;
+      }
+      const conf = e.target.closest(".code-confirm");
+      if (conf) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (conf.disabled) return;
+        const mid = conf.getAttribute("data-machine-id") || conf.dataset.machineId;
+        if (mid && codeSubmitting.has(mid)) return;
+        const input = conf.parentElement && conf.parentElement.querySelector(".code-input");
+        const code = (input && input.value || "").trim();
+        if (!code) {
+          alert("请先输入验证码");
+          if (input) input.focus();
+          return;
+        }
+        // 立刻改按钮，不等异步
+        conf.disabled = true;
+        conf.textContent = "提交中…";
+        if (input) input.disabled = true;
+        submitRecoveryCode(mid, code, conf);
+        codeDrafts.delete(mid);
+      }
+    });
+    $("resultBody").addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      const input = e.target.closest(".code-input");
+      if (!input || input.disabled) return;
+      e.preventDefault();
+      const mid = input.dataset.machineId;
+      if (mid && codeSubmitting.has(mid)) return;
+      const code = (input.value || "").trim();
+      if (!code) return;
+      const conf = input.parentElement && input.parentElement.querySelector(".code-confirm");
+      if (conf) {
+        conf.disabled = true;
+        conf.textContent = "提交中…";
+      }
+      input.disabled = true;
+      submitRecoveryCode(mid, code, conf);
+      codeDrafts.delete(mid);
+    });
+    loadSettings();
+    loadExcelHints();
+  </script>
+</body>
+</html>

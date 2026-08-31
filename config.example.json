@@ -1,0 +1,60 @@
+{
+  "hubstudio_api": "http://127.0.0.1:6873/api/v1",
+  "hubstudio_exe_path": "",
+  "local_api_key": "",
+  "login_url": "https://login.live.com/",
+  "wait_timeout_sec": 30,
+  "manual_mfa_timeout_sec": 120,
+  "close_browser_after_check": true,
+  "batch_concurrency": 6,
+  "hubstudio_timeout_sec": 60,
+  "hubstudio_retries": 3,
+  "browser_start_stagger_sec": 0.8,
+  "fast_fill": true,
+  "login_form_wait_sec": 4,
+  "acquire_page_max_sec": 10,
+  "cdp_connect_timeout_ms": 60000,
+  "browser": {
+    "headless": false,
+    "minimize_on_start": true,
+    "silent_open": true,
+    "lightweight": true,
+    "keep_background": true
+  },
+  "results_keep_count": 5,
+  "screenshot": {
+    "enabled": true,
+    "max_wait_sec": 8
+  },
+  "excel_sync": {
+    "enabled": false,
+    "file_path": "",
+    "machine_headers": ["机子号", "环境名称", "环境", "containerName"],
+    "status_headers": ["登入情况", "登录情况"],
+    "include_detail": false,
+    "write_while_open": true
+  },
+  "recovery_imap": {
+    "host": "",
+    "port": 993,
+    "use_ssl": true,
+    "domain_hosts": {}
+  },
+  "recovery_code_timeout_sec": 600,
+  "recovery_code_poll_sec": 6,
+  "recovery_mail_create_wait_sec": 60,
+  "recovery_manual_code": true,
+  "foxmail": {
+    "enabled": true,
+    "imap_only": false,
+    "use_ui": true,
+    "auto_create": true,
+    "background": true,
+    "exe_path": "",
+    "data_dir": "",
+    "require_settings_open": false,
+    "create_confirm_sec": 20,
+    "minimize_after": false,
+    "park_offscreen": false
+  }
+}
